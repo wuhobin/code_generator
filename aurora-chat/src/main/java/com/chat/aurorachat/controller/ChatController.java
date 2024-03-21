@@ -1,6 +1,6 @@
 package com.chat.aurorachat.controller;
 
-import org.springframework.http.ResponseEntity;
+import com.chat.aurorachat.utils.CommonResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatController {
 
     @GetMapping("/hello")
-    public ResponseEntity chat() {
-        return ResponseEntity.ok("hello");
+    public CommonResult chat() {
+        return CommonResult.success("hello");
     }
 }
