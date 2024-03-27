@@ -1,10 +1,14 @@
 package com.boot.example.utils;
 
+
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.util.Strings;
+import org.springframework.web.util.CookieGenerator;
 
 import javax.net.ssl.*;
 import java.io.*;
@@ -22,7 +26,7 @@ import java.util.Set;
 /**
  * 网络工具类。
  *
- * @author wuhongbin
+ * @author wuhobin
  * @since 1.0,28 ,4 , 2023
  */
 @Slf4j
@@ -39,17 +43,14 @@ public abstract class HttpUtils {
     private static SSLSocketFactory socketFactory   = null;
 
     private static class DefaultTrustManager implements X509TrustManager {
-        @Override
         public X509Certificate[] getAcceptedIssuers() {
             return null;
         }
 
-        @Override
         public void checkClientTrusted(X509Certificate[] chain,
                                        String authType) throws CertificateException {
         }
 
-        @Override
         public void checkServerTrusted(X509Certificate[] chain,
                                        String authType) throws CertificateException {
         }
@@ -77,10 +78,6 @@ public abstract class HttpUtils {
         };
 
     }
-
-    private HttpUtils() {
-    }
-
     /**
      * 执行HTTP POST请求，可使用代理proxy。
      *
@@ -105,6 +102,29 @@ public abstract class HttpUtils {
      * 执行HTTP POST请求，可使用代理proxy。
      *
      * @param url 请求地址
+     * @param headers 请求头
+     * @param jsonParams 请求参数(json字符串)
+     * @param connectTimeout 连接超时时间
+     * @param readTimeout 请求超时时间
+     * @return 响应字符串
+     * @throws IOException
+     */
+    public static String doPost(String url,Map<String,String> headers, String jsonParams,String charset,
+                                int connectTimeout, int readTimeout) throws IOException {
+        headers.put("Content-Type", "application/json;charset=UTF-8");
+        byte[] content = {};
+        if (StringUtils.isNotEmpty(charset)) {
+            content = jsonParams.getBytes(charset);
+        }else {
+            content = jsonParams.getBytes(DEFAULT_CHARSET);
+        }
+        return doPost(url, headers, content, connectTimeout, readTimeout);
+    }
+
+    /**
+     * 执行HTTP POST请求，可使用代理proxy。
+     *
+     * @param url 请求地址
      * @param jsonParams 请求参数(json字符串)
      * @param connectTimeout 连接超时时间
      * @param readTimeout 请求超时时间
@@ -115,11 +135,85 @@ public abstract class HttpUtils {
                                 int connectTimeout, int readTimeout) throws IOException {
         String ctype = "application/json;charset=" + charset;
         byte[] content = {};
-        if (StringUtils.isNotEmpty(jsonParams)) {
+        if (StringUtils.isNotEmpty(charset)) {
             content = jsonParams.getBytes(charset);
         }
         return doPost(url, ctype, content, connectTimeout, readTimeout, null, -1);
     }
+
+    /**
+     * 执行HTTP POST请求，可使用代理proxy。
+     *
+     * @param url 请求地址
+     * @param headers 请求头
+     * @param jsonParams 请求参数(json字符串)
+     * @param connectTimeout 连接超时时间
+     * @param readTimeout 请求超时时间
+     * @return 响应字符串
+     * @throws IOException
+     */
+    public static String doChatPost(String url,Map<String,String> headers, String jsonParams,
+                                    int connectTimeout, int readTimeout, String proxyHost, int proxyPort) throws IOException {
+        headers.put("Content-Type", "application/json;charset=UTF-8");
+        byte[] content = jsonParams.getBytes(DEFAULT_CHARSET);;
+        return doChatPost(url, headers, content, connectTimeout, readTimeout, proxyHost, proxyPort);
+    }
+
+
+    /**
+     * 执行HTTP POST请求。
+     *
+     * @param url 请求地址
+     * @param headers 请求头
+     * @param content 请求字节数组
+     * @param connectTimeout 连接超时时间
+     * @param readTimeout 请求超时时间
+     * @return 响应字符串
+     * @throws IOException
+     */
+    public static String doChatPost(String url, Map<String,String> headers, byte[] content, int connectTimeout,
+                                int readTimeout, String proxyHost, int proxyPort) throws IOException {
+        HttpURLConnection conn = null;
+        OutputStream out = null;
+        String rsp = null;
+        try {
+            try {
+                conn = null;
+                if (!StringUtils.isEmpty(proxyHost)) {
+                    conn = getConnection(new URL(url), METHOD_POST, headers, proxyHost, proxyPort);
+                } else {
+                    conn = getConnection(new URL(url), METHOD_POST, headers);
+                }
+
+                conn.setConnectTimeout(connectTimeout);
+                conn.setReadTimeout(readTimeout);
+            } catch (IOException e) {
+                log.error("url:{},headers={},参数类型为bytes", url, headers, e);
+                throw e;
+            }
+            try {
+                out = conn.getOutputStream();
+                out.write(content);
+                rsp = getResponseAsString(conn);
+            } catch (IOException e) {
+                log.error("url:{},headers={},参数类型为bytes", url, headers, e);
+                throw e;
+            }
+
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+            if (conn != null) {
+                conn.disconnect();
+
+            }
+        }
+
+        return rsp;
+    }
+
+
 
     /**
      * 执行HTTP POST请求，可使用代理proxy。
@@ -227,6 +321,53 @@ public abstract class HttpUtils {
                 rsp = getResponseAsString(conn);
             } catch (IOException e) {
                 log.error("url:{},ctype={},参数类型为bytes", url, ctype, e);
+                throw e;
+            }
+
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+            if (conn != null) {
+                conn.disconnect();
+
+            }
+        }
+
+        return rsp;
+    }
+
+    /**
+     * 执行HTTP POST请求。
+     *
+     * @param url 请求地址
+     * @param headers 请求头
+     * @param content 请求字节数组
+     * @param connectTimeout 连接超时时间
+     * @param readTimeout 请求超时时间
+     * @return 响应字符串
+     * @throws IOException
+     */
+    public static String doPost(String url, Map<String,String> headers, byte[] content, int connectTimeout,
+                                int readTimeout) throws IOException {
+        HttpURLConnection conn = null;
+        OutputStream out = null;
+        String rsp = null;
+        try {
+            try {
+                conn = getConnection(new URL(url), METHOD_POST, headers);
+                conn.setConnectTimeout(connectTimeout);
+                conn.setReadTimeout(readTimeout);
+            } catch (IOException e) {
+                log.error("url:{},headers={},参数类型为bytes", url, headers, e);
+                throw e;
+            }
+            try {
+                out = conn.getOutputStream();
+                out.write(content);
+                rsp = getResponseAsString(conn);
+            } catch (IOException e) {
+                log.error("url:{},headers={},参数类型为bytes", url, headers, e);
                 throw e;
             }
 
@@ -353,6 +494,17 @@ public abstract class HttpUtils {
         return rsp;
     }
 
+    private static HttpURLConnection getConnection(URL url, String method, Map<String,String> headers) throws IOException {
+        return getConnection(url, method, headers, null);
+    }
+
+
+    private static HttpURLConnection getConnection(URL url, String method, Map<String,String> headers,  String proxyHost, int proxyPort) throws IOException {
+        Proxy proxy = new Proxy(Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+        return getConnection(url, method, headers, proxy);
+    }
+
+
     private static HttpURLConnection getConnection(URL url, String method, String ctype) throws IOException {
         return getConnection(url, method, ctype, null);
     }
@@ -387,9 +539,42 @@ public abstract class HttpUtils {
         conn.setRequestMethod(method);
         conn.setDoInput(true);
         conn.setDoOutput(true);
-        conn.setRequestProperty("Accept", "text/xml,text/javascript,text/html");
-        conn.setRequestProperty("User-Agent", "aop-sdk-java");
+        conn.setRequestProperty("Accept", "*/*");
+//        conn.setRequestProperty("User-Agent", "aop-sdk-java");
         conn.setRequestProperty("Content-Type", ctype);
+        return conn;
+    }
+
+    private static HttpURLConnection getConnection(URL url, String method, Map<String,String> headers, Proxy proxy) throws IOException {
+        HttpURLConnection conn = null;
+        if ("https".equals(url.getProtocol())) {
+            HttpsURLConnection connHttps = null;
+            if (proxy != null) {
+                connHttps = (HttpsURLConnection) url.openConnection(proxy);
+            } else {
+                connHttps = (HttpsURLConnection) url.openConnection();
+            }
+            connHttps.setSSLSocketFactory(socketFactory);
+            connHttps.setHostnameVerifier(verifier);
+            conn = connHttps;
+        } else {
+            conn = null;
+            if (proxy != null) {
+                conn = (HttpURLConnection) url.openConnection(proxy);
+            } else {
+                conn = (HttpURLConnection) url.openConnection();
+            }
+        }
+
+        conn.setRequestMethod(method);
+        conn.setDoInput(true);
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Accept", "text/xml,text/javascript,text/html,*/*");
+        if(MapUtils.isNotEmpty(headers)){
+            for(String key : headers.keySet()){
+                conn.setRequestProperty(key, headers.get(key));
+            }
+        }
         return conn;
     }
 
@@ -647,7 +832,41 @@ public abstract class HttpUtils {
         return sb.toString();
     }
 
+    /**
+     * 设置http cookie，默认设置成http only
+     *
+     * @param resp
+     *            http response
+     * @param cookieName
+     *            cookie名
+     * @param cookieValue
+     *            cookie值
+     * @param cookieDomain
+     *            cookie所在的domain，此domain下的server才能读此cookie
+     * @param cookiePath
+     *            设置cookie可见路径，此URL及下属才能读取此cookie，传入null会使用默认值"/"，也就是全站可读
+     * @param cookieMaxAge
+     *            单位：秒，cookie的存活时间，-1或者null代表客户端关闭后立即删除，不持久化
+     */
+    public static void writeCookieValue(HttpServletResponse resp,
+                                        String cookieName, String cookieValue, String cookieDomain,
+                                        String cookiePath, Integer cookieMaxAge) {
+        CookieGenerator cookieGenerator = new CookieGenerator();
+        cookieGenerator.setCookieDomain(cookieDomain);
+        if (cookiePath != null) {
+            cookieGenerator.setCookiePath(cookiePath);
+        }
+        // 详情请查阅http only的解释，跟安全相关，仅在servlet3.0以上才支持
+        cookieGenerator.setCookieHttpOnly(true);
+        // cookie是否只在https环境下才发送，明显我们不是
+        cookieGenerator.setCookieSecure(false);
+        cookieGenerator.setCookieName(cookieName);
+        cookieGenerator.setCookieMaxAge(cookieMaxAge);
+        cookieGenerator.addCookie(resp, cookieValue);
+    }
+
     private static String nullToEmpty(String string) {
         return string == null ? "" : string;
     }
+
 }
