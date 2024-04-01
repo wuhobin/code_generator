@@ -10,20 +10,20 @@ import lombok.Getter;
  * @version: 1.0.0
  */
 @Getter
-public enum ResultCode {
+public enum EmailCodeType {
 
-    SUCCESS(200,"请求成功"),
+    LOGIN(1,"登录"),
 
-    VERBOSE(400,"请求参数不正确"),
+    REGISTER(2,"注册"),
 
-    FAILED(500,"请求失败");
+    FORGET_PASSWORD(3,"忘记密码");
 
-    private final int code;
+    private final int type;
 
     private final String msg;
 
-    ResultCode(int code, String msg){
-        this.code = code;
+    EmailCodeType(int type, String msg){
+        this.type = type;
         this.msg = msg;
     }
 }

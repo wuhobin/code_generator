@@ -1,7 +1,7 @@
 package com.boot.example.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.boot.example.dataobject.UserDO;
+import com.boot.example.entity.UserDO;
 
 /**
  * <p>

@@ -21,11 +21,26 @@ spring:
       max-lifetime: 1800000
       connection-timeout: 30000
       connection-test-query: SELECT 1
+  mail:
+    host: smtp.qq.com
+    username: ${mail.username}
+    password: ${mail.password}
+    default-encoding: utf-8
+    protocol: smtp
+    port: 465
+    properties:
+      mail:
+        smtp:
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+          ssl:
+            enable: true
 
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/*
-  type-aliases-package: com.boot.example.dataobject
+  type-aliases-package: com.boot.example.entity
 
 
 sa-token:

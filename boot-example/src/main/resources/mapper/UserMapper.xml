@@ -3,7 +3,7 @@
 <mapper namespace="com.boot.example.mapper.UserMapper">
 
     <!-- 通用查询映射结果 -->
-    <resultMap id="BaseResultMap" type="com.boot.example.dataobject.UserDO">
+    <resultMap id="BaseResultMap" type="com.boot.example.entity.UserDO">
         <id column="id" property="id" />
         <result column="user_id" property="userId" />
         <result column="username" property="username" />
